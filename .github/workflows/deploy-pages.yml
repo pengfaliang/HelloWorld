@@ -1,0 +1,47 @@
+# 工作流名称：展示在 GitHub Actions 列表中
+name: Deploy to Github Pages
+# 触发条件：在 PR 创建/更新等事件发生时触发
+on:
+  push:
+    branches: [main]
+
+# 权限声明
+permissions:
+  contents: write
+
+# 并发控制：避免同一 PR/ref 重复跑多次
+concurrency: 
+  # 并发分组：同一 workflow + 同一 ref 归为一组
+  group: deploy-pages-${{ github.workflow }}-${{ github.ref }}
+  # 新的运行开始时取消旧的进行中运行
+  cancel-in-progress: true
+
+jobs:
+  # 作业名称 
+  deploy:
+    runs-on: ubuntu-latest
+    # 作业步骤: 按顺序执行
+    steps:
+      - name: Checkout
+        # 拉取仓库代码（PR 代码）
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        # 安装并配置 Node.js
+        uses: actions/setup-node@v4 
+        # setup-node 输入参数
+        with:
+          node-version: '22.14.0'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          publish_dir: ./dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
